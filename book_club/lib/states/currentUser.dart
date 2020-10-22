@@ -1,23 +1,56 @@
+import 'package:book_club/models/user.dart';
+import 'package:book_club/services/database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class CurrentUser extends ChangeNotifier {
-  String _uid;
-  String _email;
+  OurUser _currentUser = OurUser();
 
   FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String get getUid => _uid;
+  OurUser get getCurrentUser => _currentUser;
 
-  String get getEmail => _email;
-
-  Future<String> signUpUser(String email, String password) async {
+  Future<String> onStartup() async {
     String returnVal = "error";
     try {
-      await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
+      FirebaseUser _firebaseUser = await _auth.currentUser();
+      if (_firebaseUser != null) {
+        _currentUser = await OurDatabase().getUserInfo(_firebaseUser.uid);
+        if (_currentUser != null) {
+          returnVal = "success";
+        }
+      }
+    } catch (e) {
+      print(e);
+    }
+    return returnVal;
+  }
+
+  Future<String> signOut() async {
+    String returnVal = "error";
+    try {
+      await _auth.signOut();
+      _currentUser = OurUser();
       returnVal = "success";
+    } catch (e) {
+      print(e);
+    }
+    return returnVal;
+  }
+
+  Future<String> signUpUser(String email, String password, String fullName) async {
+    String returnVal = "error";
+    OurUser _user = OurUser();
+    try {
+      AuthResult _authResult = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      _user.uid = _authResult.user.uid;
+      _user.email = _authResult.user.email;
+      _user.fullName = fullName;
+      String _returnString = await OurDatabase().createUser(_user);
+      if (_returnString == "success") {
+        returnVal = "success";
+      }
     } catch (e) {
       returnVal = e.message;
     }
@@ -27,12 +60,11 @@ class CurrentUser extends ChangeNotifier {
   Future<String> loginUserWithEmail(String email, String password) async {
     String returnVal = "error";
     try {
-      AuthResult _authResult = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
-
-      _uid = _authResult.user.uid;
-      _email = _authResult.user.email;
-      returnVal = "success";
+      AuthResult _authResult = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      _currentUser = await OurDatabase().getUserInfo(_authResult.user.uid);
+      if (_currentUser != null) {
+        returnVal = "success";
+      }
     } catch (e) {
       returnVal = e.message;
     }
@@ -40,23 +72,30 @@ class CurrentUser extends ChangeNotifier {
   }
 
   Future<String> loginUserWithGoogle() async {
+    String returnVal = "error";
     GoogleSignIn _googleSignIn = GoogleSignIn(
       scopes: [
         'email',
         'https://www.googleapis.com/auth/contacts.readonly',
       ],
     );
-    String returnVal = "error";
+    OurUser _user = OurUser();
+
     try {
       GoogleSignInAccount _googleUser = await _googleSignIn.signIn();
       GoogleSignInAuthentication _googleAuth = await _googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.getCredential(
-          idToken: _googleAuth.idToken, accessToken: _googleAuth.accessToken);
+      final AuthCredential credential = GoogleAuthProvider.getCredential(idToken: _googleAuth.idToken, accessToken: _googleAuth.accessToken);
       AuthResult _authResult = await _auth.signInWithCredential(credential);
-
-      _uid = _authResult.user.uid;
-      _email = _authResult.user.email;
-      returnVal = "success";
+      if (_authResult.additionalUserInfo.isNewUser) {
+        _user.uid = _authResult.user.uid;
+        _user.email = _authResult.user.email;
+        _user.fullName = _authResult.user.displayName;
+        OurDatabase().createUser(_user);
+      }
+      _currentUser = await OurDatabase().getUserInfo(_authResult.user.uid);
+      if (_currentUser != null) {
+        returnVal = "success";
+      }
     } catch (e) {
       returnVal = e.message;
     }

@@ -1,4 +1,4 @@
-import 'package:book_club/screens/login/login.dart';
+import 'package:book_club/screens/root/root.dart';
 import 'package:book_club/states/currentUser.dart';
 import 'package:book_club/utils/ourTheme.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         title: "Book Club",
         debugShowCheckedModeBanner: false,
         theme: OurTheme().buildTheme(),
-        home: OurLogin(),
+        home: OurRoot(),
       ),
     );
   }
