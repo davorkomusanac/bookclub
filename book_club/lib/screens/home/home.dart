@@ -1,7 +1,12 @@
+import 'dart:async';
+
+import 'package:book_club/screens/addBook/addBook.dart';
 import 'package:book_club/screens/noGroup/noGroup.dart';
+import 'package:book_club/screens/review/review.dart';
 import 'package:book_club/screens/root/root.dart';
 import 'package:book_club/states/currentGroup.dart';
 import 'package:book_club/states/currentUser.dart';
+import 'package:book_club/utils/timeLeft.dart';
 import 'package:book_club/widgets/ourContainer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,20 +17,49 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<String> _timeUntil = List(2); // [0] = Time until book is due // [1] - Time until next book is revealed
+  Timer _timer;
+
+  void _startTimer(CurrentGroup currentGroup) {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _timeUntil = OurTimeLeft().timeLeft(currentGroup.getCurrentGroup.currentBookDue.toDate());
+      });
+    });
+  }
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
     CurrentUser _currentUser = Provider.of<CurrentUser>(context, listen: false);
     CurrentGroup _currentGroup = Provider.of<CurrentGroup>(context, listen: false);
-    _currentGroup.updateStateFromDatabase(_currentUser.getCurrentUser.groupID);
+    _currentGroup.updateStateFromDatabase(_currentUser.getCurrentUser.groupID, _currentUser.getCurrentUser.uid);
+    _startTimer(_currentGroup);
   }
 
-  void _goToNoGroup(BuildContext context) {
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _goToAddBook(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => OurNoGroup(),
+        builder: (context) => OurAddBook(onGroupCreation: false),
+      ),
+    );
+  }
+
+  void _goToReview() {
+    CurrentGroup _currentGroup = Provider.of<CurrentGroup>(context, listen: false);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OurReview(currentGroup: _currentGroup),
       ),
     );
   }
@@ -76,9 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             Expanded(
                               child: Text(
-                                (value.getCurrentGroup.currentBookDue != null)
-                                    ? value.getCurrentGroup.currentBookDue.toDate().toString()
-                                    : "loading..",
+                                _timeUntil[0] ?? "loading..",
                                 style: TextStyle(
                                   fontSize: 30.0,
                                   fontWeight: FontWeight.bold,
@@ -89,7 +121,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          value.getDoneWithCurrentBook ? null : _goToReview();
+                        },
                         child: Text(
                           "Finished Book",
                           style: TextStyle(color: Colors.white),
@@ -106,18 +140,18 @@ class _HomeScreenState extends State<HomeScreen> {
             child: OurContainer(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      "Next Book Revealed In: ",
+                      "Next Book\nRevealed In: ",
                       style: TextStyle(
                         fontSize: 30.0,
                         color: Colors.grey[600],
                       ),
                     ),
                     Text(
-                      "22 Hours",
+                      _timeUntil[1] ?? "loading..",
                       style: TextStyle(
                         fontSize: 30.0,
                         fontWeight: FontWeight.bold,
@@ -135,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all(Colors.green),
               ),
-              onPressed: () => _goToNoGroup(context),
+              onPressed: () => _goToAddBook(context),
             ),
           ),
           Padding(

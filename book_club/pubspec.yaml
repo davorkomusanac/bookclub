@@ -28,6 +28,8 @@ dependencies:
   google_sign_in: ^4.2.0
   firebase_core: ^0.4.4+2
   cloud_firestore: ^0.13.4+2
+  flutter_datetime_picker:
+  intl:
 
 
 

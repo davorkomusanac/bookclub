@@ -61,9 +61,9 @@ class _OurCreateGroupState extends State<OurCreateGroup> {
                   ElevatedButton(
                     onPressed: () => _goToAddBook(context, _groupNameController.text),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 100.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 90.0),
                       child: Text(
-                        "Create",
+                        "Add Book",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
